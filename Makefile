@@ -19,7 +19,7 @@ MMSOURCE19 = ../../../mmsource-1.9
 ### EDIT BELOW FOR OTHER PROJECTS ###
 #####################################
 
-PROJECT = sample
+PROJECT = closestpos
 
 #Uncomment for Metamod: Source enabled extension
 #USEMETA = true

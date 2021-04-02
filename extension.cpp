@@ -29,13 +29,224 @@
  * Version: $Id$
  */
 
+// because I use code from nanoflann (pointcloud_kdd_radius.cpp & utils.h)
+/***********************************************************************
+ * Software License Agreement (BSD License)
+ *
+ * Copyright 2011-2016 Jose Luis Blanco (joseluisblancoc@gmail.com).
+ *   All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *************************************************************************/
+
 #include "extension.h"
+#include "ICellArray.h"
 
-/**
- * @file extension.cpp
- * @brief Implement extension code here.
- */
+#include <vector>
+#include "nanoflann.hpp"
+using namespace nanoflann;
 
-Sample g_Sample;		/**< Global singleton for extension's main interface */
+ClosestPos g_Extension;		/**< Global singleton for extension's main interface */
+SMEXT_LINK(&g_Extension);
 
-SMEXT_LINK(&g_Sample);
+HandleType_t g_ClosestPosType = 0;
+HandleType_t g_ArrayListType = 0;
+IdentityToken_t *g_pCoreIdent;
+extern const sp_nativeinfo_t ClosestPosNatives[];
+
+template <typename T>
+struct PointCloud
+{
+	struct Point
+	{
+		T  x,y,z;
+	};
+
+	std::vector<Point>  pts;
+
+	// Must return the number of data points
+	inline size_t kdtree_get_point_count() const { return pts.size(); }
+
+	// Returns the dim'th component of the idx'th point in the class:
+	// Since this is inlined and the "dim" argument is typically an immediate value, the
+	//  "if/else's" are actually solved at compile time.
+	inline T kdtree_get_pt(const size_t idx, const size_t dim) const
+	{
+		if (dim == 0) return pts[idx].x;
+		else if (dim == 1) return pts[idx].y;
+		else return pts[idx].z;
+	}
+
+	// Optional bounding-box computation: return false to default to a standard bbox computation loop.
+	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+	template <class BBOX>
+	bool kdtree_get_bbox(BBOX& /* bb */) const { return false; }
+};
+
+typedef KDTreeSingleIndexAdaptor<
+	L2_Simple_Adaptor<float, PointCloud<float> >,
+	PointCloud<float>,
+	3 /*dimensions*/
+	> my_kd_tree_t;
+
+class KDTreeContainer
+{
+public:
+	PointCloud<float> cloud;
+	my_kd_tree_t *index;
+};
+
+class ClosestPosTypeHandler : public IHandleTypeDispatch
+{
+public:
+	void OnHandleDestroy(HandleType_t type, void *object)
+	{
+		KDTreeContainer *container = (KDTreeContainer *)object;
+		delete container;
+	}
+};
+
+ClosestPosTypeHandler g_ClosestPosTypeHandler;
+
+bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
+{
+#ifdef _WIN32
+
+#else
+	Dl_info info;
+	// memutils is from sourcemod.logic.so so we can grab the module from it.
+	dladdr(memutils, &info);
+	void *sourcemod_logic = dlopen(info.dli_fname, RTLD_NOLOAD);
+
+	if (!sourcemod_logic)
+	{
+		snprintf(error, maxlength, "dlopen failed on '%s'", info.dli_fname);
+		return false;
+	}
+#endif
+
+	IdentityToken_t **token = (IdentityToken_t **)memutils->ResolveSymbol(sourcemod_logic, "g_pCoreIdent");
+
+	if (!token || !(g_pCoreIdent = *token))
+	{
+		snprintf(error, maxlength, "failed to resolve symbol g_pCoreIdent");
+		return false;
+	}
+
+	if (!g_pHandleSys->FindHandleType("CellArray", &g_ArrayListType))
+	{
+		snprintf(error, maxlength, "failed to find handle type 'CellArray' (ArrayList)");
+		return false;
+	}
+
+	g_ClosestPosType = g_pHandleSys->CreateType("ClosestPos",
+		&g_ClosestPosTypeHandler,
+		0,
+		NULL,
+		NULL,
+		myself->GetIdentity(),
+		NULL);
+
+	sharesys->AddNatives(myself, ClosestPosNatives);
+	sharesys->RegisterLibrary(myself, "ClosestPos");
+	return true;
+}
+
+void ClosestPos::SDK_OnUnload()
+{
+	g_pHandleSys->RemoveType(g_ClosestPosType, myself->GetIdentity());
+}
+
+static cell_t sm_CreateClosestPos(IPluginContext *pContext, const cell_t *params)
+{
+	ICellArray *pArray;
+	Handle_t arraylist = params[1];
+	cell_t offset = params[2];
+
+	if (offset < 0)
+		return pContext->ThrowNativeError("Offset must be 0 or greater (given %d)", offset);
+
+	if (arraylist == BAD_HANDLE)
+		return pContext->ThrowNativeError("Bad handle passed as ArrayList %x", arraylist);
+
+	HandleError err;
+	HandleSecurity sec(g_pCoreIdent, g_pCoreIdent);
+
+	if ((err = handlesys->ReadHandle(arraylist, g_ArrayListType, &sec, (void **)&pArray))
+		!= HandleError_None)
+	{
+		return pContext->ThrowNativeError("Invalid ArrayList Handle %x (error %d)", arraylist, err);
+	}
+
+	KDTreeContainer *container = new KDTreeContainer();
+	container->cloud.pts.resize(pArray->size());
+
+	for (size_t i = 0; i < pArray->size(); i++)
+	{
+		cell_t *blk = pArray->at(i);
+		container->cloud.pts[i].x = sp_ctof(blk[offset+0]);
+		container->cloud.pts[i].y = sp_ctof(blk[offset+1]);
+		container->cloud.pts[i].z = sp_ctof(blk[offset+2]);
+	}
+
+	container->index = new my_kd_tree_t(3 /*dimensions*/, container->cloud, KDTreeSingleIndexAdaptorParams(100 /* max leaf */));
+	container->index->buildIndex();
+
+	return g_pHandleSys->CreateHandle(g_ClosestPosType, 
+		container, 
+		pContext->GetIdentity(), 
+		myself->GetIdentity(), 
+		NULL);
+}
+
+static cell_t sm_Find(IPluginContext *pContext, const cell_t *params)
+{
+	KDTreeContainer *container;
+	HandleError err;
+	HandleSecurity sec(pContext->GetIdentity(), myself->GetIdentity());
+
+	if ((err = handlesys->ReadHandle(params[1], g_ClosestPosType, &sec, (void **)&container))
+		!= HandleError_None)
+	{
+		return pContext->ThrowNativeError("Invalid Handle %x (error: %d)", params[1], err);
+	}
+
+	cell_t *addr;
+	pContext->LocalToPhysAddr(params[2], &addr);
+
+	float out_dist_sqr;
+	size_t num_results = 1;
+	size_t ret_index = 0;
+	float query_pt[3] = {sp_ctof(addr[0]), sp_ctof(addr[1]), sp_ctof(addr[2])};
+
+	container->index->knnSearch(&query_pt[0], num_results, &ret_index, &out_dist_sqr);
+
+	return ret_index;
+}
+
+extern const sp_nativeinfo_t ClosestPosNatives[] =
+{
+	{"ClosestPos.ClosestPos",      sm_CreateClosestPos},
+	{"ClosestPos.Find",            sm_Find},
+	{NULL, NULL}
+};

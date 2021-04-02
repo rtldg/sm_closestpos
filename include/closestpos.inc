@@ -1,0 +1,25 @@
+#if defined _closestpos_included
+ #endinput
+#endif
+#define _closestpos_included
+
+methodmap ClosestPos < Handle {
+	public native ClosestPos(ArrayList input, int offset=0);
+	public native int Find(float pos[3]);
+};
+
+public Extension __ext_kdtree =
+{
+	name = "ClosestPos",
+	file = "closestpos.ext",
+#if defined AUTOLOAD_EXTENSIONS
+	autoload = 1,
+#else
+	autoload = 0,
+#endif
+#if defined REQUIRE_EXTENSIONS
+	required = 1,
+#else
+	required = 0,
+#endif
+};
