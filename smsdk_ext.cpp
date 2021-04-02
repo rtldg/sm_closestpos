@@ -1,1 +1,0 @@
-../smsdk_ext.cpp
