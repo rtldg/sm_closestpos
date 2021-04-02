@@ -3,6 +3,15 @@ Sourcemod extension to add a type called `ClosestPos` that you create with an Ar
 
 Probably going to use this in https://github.com/shavitush/bhoptimer as it will provide much faster "closest replay time" stuff.
 
+Provides the following:
+```
+methodmap ClosestPos < Handle {
+	public native ClosestPos(ArrayList input, int offset=0);
+	public native int Find(float pos[3]);
+};
+```
+
+my building thing
 ```
 cd alliedmodders/sourcemod/public/
 git clone https://github.com/rtldg/sm_closestpos.git
