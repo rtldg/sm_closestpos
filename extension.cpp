@@ -168,7 +168,7 @@ bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 		NULL);
 
 	sharesys->AddNatives(myself, ClosestPosNatives);
-	sharesys->RegisterLibrary(myself, "ClosestPos");
+	sharesys->RegisterLibrary(myself, "closestpos");
 	return true;
 }
 
