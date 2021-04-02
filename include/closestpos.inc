@@ -1,3 +1,4 @@
+
 #if defined _closestpos_included
  #endinput
 #endif
@@ -8,7 +9,7 @@ methodmap ClosestPos < Handle {
 	public native int Find(float pos[3]);
 };
 
-public Extension __ext_kdtree =
+public Extension __ext_closestpos =
 {
 	name = "ClosestPos",
 	file = "closestpos.ext",
