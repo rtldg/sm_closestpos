@@ -16,10 +16,23 @@ methodmap ClosestPos < Handle {
 my building thing
 ```
 cd alliedmodders/sourcemod/public/
-git clone https://github.com/rtldg/sm_closestpos.git
+git clone git@github.com:rtldg/sm_closestpos.git # https://github.com/rtldg/sm_closestpos.git
 cd sm_closestpos
 mkdir build
 cd build
-python3 ../configure.py
+python3 ../configure.py --enable-optimize --sdks=css,tf2,csgo
+ambuild
+```
+windows
+```
+# open VS2015 x86 Native Tools Command Prompt
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\vsdevcmd\ext\vcvars.bat"
+
+cd alliedmodders/sourcemod/public/
+git clone git@github.com:rtldg/sm_closestpos.git # https://github.com/rtldg/sm_closestpos.git
+cd sm_closestpos
+mkdir build
+cd build
+py ../configure.py --enable-optimize --sdks=css,tf2,csgo
 ambuild
 ```
