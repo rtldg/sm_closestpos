@@ -128,10 +128,35 @@ public:
 
 ClosestPosTypeHandler g_ClosestPosTypeHandler;
 
+#ifdef _WIN32
+// https://github.com/alliedmodders/sourcemod/blob/b14c18ee64fc822dd6b0f5baea87226d59707d5a/core/logic/HandleSys.h#L103
+struct QHandleType_Caster
+{
+	void *dispatch;
+	unsigned int freeID;
+	unsigned int children;
+	TypeAccess typeSec;
+};
+// https://github.com/alliedmodders/sourcemod/blob/b14c18ee64fc822dd6b0f5baea87226d59707d5a/core/logic/HandleSys.h#L230
+struct HandleSystem_Caster
+{
+	void *vtable;
+	void *m_Handles;
+	QHandleType_Caster *m_Types;
+};
+#endif
+
 bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 {
-#ifdef _WIN32
+	if (!g_pHandleSys->FindHandleType("CellArray", &g_ArrayListType))
+	{
+		snprintf(error, maxlength, "failed to find handle type 'CellArray' (ArrayList)");
+		return false;
+	}
 
+#ifdef _WIN32
+	HandleSystem_Caster *blah = (HandleSystem_Caster *)g_pHandleSys;
+	g_pCoreIdent = blah->m_Types[g_ArrayListType].typeSec.ident;
 #else
 	Dl_info info;
 	// memutils is from sourcemod.logic.so so we can grab the module from it.
@@ -143,19 +168,21 @@ bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 		snprintf(error, maxlength, "dlopen failed on '%s'", info.dli_fname);
 		return false;
 	}
-#endif
 
 	IdentityToken_t **token = (IdentityToken_t **)memutils->ResolveSymbol(sourcemod_logic, "g_pCoreIdent");
 
-	if (!token || !(g_pCoreIdent = *token))
+	if (!token)
 	{
 		snprintf(error, maxlength, "failed to resolve symbol g_pCoreIdent");
 		return false;
 	}
 
-	if (!g_pHandleSys->FindHandleType("CellArray", &g_ArrayListType))
+	g_pCoreIdent = *token;
+#endif
+
+	if (!g_pCoreIdent)
 	{
-		snprintf(error, maxlength, "failed to find handle type 'CellArray' (ArrayList)");
+		snprintf(error, maxlength, "g_pCoreIdent is NULL");
 		return false;
 	}
 
