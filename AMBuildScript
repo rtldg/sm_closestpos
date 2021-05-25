@@ -79,28 +79,6 @@ class ExtensionConfig(object):
     return 'Release'
 
   def detectSDKs(self):
-    sdk_list = builder.options.sdks.split(',')
-    use_all = sdk_list[0] == 'all'
-    use_present = sdk_list[0] == 'present'
-
-    for sdk_name in PossibleSDKs:
-      sdk = PossibleSDKs[sdk_name]
-      if builder.target_platform in sdk.platform:
-        if builder.options.hl2sdk_root:
-          sdk_path = os.path.join(builder.options.hl2sdk_root, sdk.folder)
-        else:
-          sdk_path = ResolveEnvPath(sdk.envvar, sdk.folder)
-        if sdk_path is None or not os.path.isdir(sdk_path):
-          if use_all or sdk_name in sdk_list:
-            raise Exception('Could not find a valid path for {0}'.format(sdk.envvar))
-          continue
-        if use_all or use_present or sdk_name in sdk_list:
-          sdk.path = Normalize(sdk_path)
-          self.sdks[sdk_name] = sdk
-
-    if len(self.sdks) < 1:
-      raise Exception('At least one SDK must be available.')
-
     if builder.options.sm_path:
       self.sm_root = builder.options.sm_path
     else:
@@ -430,6 +408,15 @@ class ExtensionConfig(object):
   def HL2Config(self, project, name, sdk):
     binary = project.Configure(name, '{0} - {1}'.format(self.tag, sdk.name))
     return self.ConfigureForHL2(binary, sdk)
+
+  def SMProject(self, context, name):
+    project = context.compiler.LibraryProject(name)
+    self.ConfigureForExtension(context, project.compiler)
+    return project
+
+  def SMConfig(self, project, name):
+    binary = project.Configure(name, self.tag)
+    return binary
 
 Extension = ExtensionConfig()
 Extension.detectSDKs()

@@ -21,7 +21,7 @@ git clone git@github.com:rtldg/sm_closestpos.git # https://github.com/rtldg/sm_c
 cd sm_closestpos
 mkdir build
 cd build
-python3 ../configure.py --enable-optimize --sdks=css,tf2,csgo
+python3 ../configure.py --enable-optimize
 ambuild
 ```
 windows
@@ -33,6 +33,6 @@ git clone git@github.com:rtldg/sm_closestpos.git # https://github.com/rtldg/sm_c
 cd sm_closestpos
 mkdir build
 cd build
-py ../configure.py --enable-optimize --sdks=css,tf2,csgo
+py ../configure.py --enable-optimize
 ambuild
 ```
