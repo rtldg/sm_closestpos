@@ -156,7 +156,10 @@ bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 
 #ifdef _WIN32
 	HandleSystem_Caster *blah = (HandleSystem_Caster *)g_pHandleSys;
-	g_pCoreIdent = blah->m_Types[g_ArrayListType].typeSec.ident;
+	// g_ArrayListType doesn't work here???
+	// I really have no idea what's going on. This is terrible....
+	unsigned index = 512;
+	g_pCoreIdent = blah->m_Types[index].typeSec.ident;
 #else
 	Dl_info info;
 	// memutils is from sourcemod.logic.so so we can grab the module from it.
