@@ -18,7 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-20.04
+          - ubuntu-18.04
           - windows-latest
           
         sm_version:
@@ -28,7 +29,10 @@ jobs:
           - sm_version: "1.10"
             branch: "1.10-dev"
             
-          - os: ubuntu-latest
+          - os: ubuntu-20.04
+            os_short: linux
+            
+          - os: ubuntu-18.04
             os_short: linux
             
           - os: windows-latest
@@ -111,5 +115,5 @@ jobs:
       - name: Uploading package
         uses: actions/upload-artifact@v2
         with:
-          name: sm_closestpos-sm${{ matrix.sm_version }}-${{ matrix.os_short }}-${{ env.GITHUB_SHA_SHORT }}
+          name: sm_closestpos-sm${{ matrix.sm_version }}-${{ matrix.os }}-${{ env.GITHUB_SHA_SHORT }}
           path: sm_closestpos/build/package
