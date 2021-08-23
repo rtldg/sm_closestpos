@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: build with sm${{ matrix.sm_version }} on ${{ matrix.os_short }}
+    name: build with sm${{ matrix.sm_version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,13 +30,10 @@ jobs:
             branch: "1.10-dev"
             
           - os: ubuntu-20.04
-            os_short: linux
             
           - os: ubuntu-18.04
-            os_short: linux
             
           - os: windows-latest
-            os_short: win
             
     steps:
       - name: Prepare env
