@@ -40,7 +40,7 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"ClosestPos"
 #define SMEXT_CONF_DESCRIPTION	"Provides a type that can be used to quickly find the closest point to the input position."
-#define SMEXT_CONF_VERSION		"1.0.0.0"
+#define SMEXT_CONF_VERSION		"1.1.0.0"
 #define SMEXT_CONF_AUTHOR		"rtldg"
 #define SMEXT_CONF_URL			"https://github.com/rtldg/sm_closestpos"
 #define SMEXT_CONF_LOGTAG		"CLOSESTPOS"

@@ -207,6 +207,9 @@ void ClosestPos::SDK_OnUnload()
 	g_pHandleSys->RemoveType(g_ClosestPosType, myself->GetIdentity());
 }
 
+#define asdfMIN(a,b) (((a)<(b))?(a):(b))
+#define asdfMAX(a,b) (((a)>(b))?(a):(b))
+
 static cell_t sm_CreateClosestPos(IPluginContext *pContext, const cell_t *params)
 {
 	ICellArray *pArray;
@@ -228,12 +231,34 @@ static cell_t sm_CreateClosestPos(IPluginContext *pContext, const cell_t *params
 		return pContext->ThrowNativeError("Invalid ArrayList Handle %x (error %d)", arraylist, err);
 	}
 
-	KDTreeContainer *container = new KDTreeContainer();
-	container->cloud.pts.resize(pArray->size());
+	auto size = pArray->size();
+	cell_t startidx = 0;
+	cell_t count = size;
 
-	for (size_t i = 0; i < pArray->size(); i++)
+	if (params[0] > 2)
 	{
-		cell_t *blk = pArray->at(i);
+		startidx = params[3];
+		count = params[4];
+
+		if (startidx < 0 || startidx > (size-1))
+		{
+			return pContext->ThrowNativeError("startidx (%d) must be >=0 and less than the ArrayList size (%d)", startidx, size);
+		}
+
+		if (count < 1)
+		{
+			return pContext->ThrowNativeError("count must be 1 or greater (given %d)", count);
+		}
+
+		count = asdfMIN(count, size-startidx);
+	}
+
+	KDTreeContainer *container = new KDTreeContainer();
+	container->cloud.pts.resize(count);
+
+	for (size_t i = 0; i < count; i++)
+	{
+		cell_t *blk = pArray->at(startidx+i);
 		container->cloud.pts[i].x = sp_ctof(blk[offset+0]);
 		container->cloud.pts[i].y = sp_ctof(blk[offset+1]);
 		container->cloud.pts[i].z = sp_ctof(blk[offset+2]);
