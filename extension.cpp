@@ -114,6 +114,7 @@ class KDTreeContainer
 public:
 	PointCloud<float> cloud;
 	my_kd_tree_t *index;
+	int startidx;
 };
 
 class ClosestPosTypeHandler : public IHandleTypeDispatch
@@ -254,6 +255,7 @@ static cell_t sm_CreateClosestPos(IPluginContext *pContext, const cell_t *params
 	}
 
 	KDTreeContainer *container = new KDTreeContainer();
+	container->startidx = startidx;
 	container->cloud.pts.resize(count);
 
 	for (size_t i = 0; i < count; i++)
@@ -296,7 +298,7 @@ static cell_t sm_Find(IPluginContext *pContext, const cell_t *params)
 
 	container->index->knnSearch(&query_pt[0], num_results, &ret_index, &out_dist_sqr);
 
-	return ret_index;
+	return container->startidx + ret_index;
 }
 
 extern const sp_nativeinfo_t ClosestPosNatives[] =
