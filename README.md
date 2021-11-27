@@ -8,7 +8,7 @@ Probably going to use this in https://github.com/shavitush/bhoptimer as it will 
 Provides the following:
 ```
 methodmap ClosestPos < Handle {
-	public native ClosestPos(ArrayList input, int offset=0);
+	public native ClosestPos(ArrayList input, int offset=0, int startidx=0, int count=2147483646);
 	public native int Find(float pos[3]);
 };
 ```
