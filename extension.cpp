@@ -241,7 +241,7 @@ static cell_t sm_CreateClosestPos(IPluginContext *pContext, const cell_t *params
 		startidx = params[3];
 		count = params[4];
 
-		if (startidx < 0 || startidx > (size-1))
+		if (startidx < 0 || startidx > ((cell_t)size-1))
 		{
 			return pContext->ThrowNativeError("startidx (%d) must be >=0 and less than the ArrayList size (%d)", startidx, size);
 		}
@@ -251,14 +251,14 @@ static cell_t sm_CreateClosestPos(IPluginContext *pContext, const cell_t *params
 			return pContext->ThrowNativeError("count must be 1 or greater (given %d)", count);
 		}
 
-		count = asdfMIN(count, size-startidx);
+		count = asdfMIN(count, (cell_t)size-startidx);
 	}
 
 	KDTreeContainer *container = new KDTreeContainer();
 	container->startidx = startidx;
 	container->cloud.pts.resize(count);
 
-	for (size_t i = 0; i < count; i++)
+	for (int i = 0; i < count; i++)
 	{
 		cell_t *blk = pArray->at(startidx+i);
 		container->cloud.pts[i].x = sp_ctof(blk[offset+0]);
