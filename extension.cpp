@@ -169,7 +169,7 @@ bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 
 	if (!sourcemod_logic)
 	{
-		snprintf(error, maxlength, "dlopen failed on '%s'", info.dli_fname);
+		snprintf(error, maxlength, "dlopen failed on '%s' (%s)", info.dli_fname, dlerror());
 		return false;
 	}
 
