@@ -11,51 +11,60 @@ on:
     - README.md
 
 jobs:
-  build:
-    name: build with sm${{ matrix.sm_version }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-20.04
-          - ubuntu-18.04
-          - windows-latest
-          
-        sm_version:
-          - "1.10"
-          
-        include:
-          - sm_version: "1.10"
-            branch: "1.10-dev"
-            
-          - os: ubuntu-20.04
-            
-          - os: ubuntu-18.04
-            
-          - os: windows-latest
-            
+  linux:
+    name: linux build
+    runs-on: ubuntu-latest
+    container:
+      image: idk1703/build-img:11
+      
     steps:
       - name: Prepare env
         shell: bash
-        run: |
-          echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+        run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Checking out SourceMod
+        uses: actions/checkout@v3
+        with:
+          repository: alliedmodders/sourcemod
+          ref: 1.11-dev
+          path: sourcemod
+          submodules: recursive
           
-      - name: Install (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update
-          sudo apt-get install -y clang g++-multilib
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
+      - name: Checking out MM:Source
+        uses: actions/checkout@v3
+        with:
+          repository: alliedmodders/metamod-source
+          ref: 1.11-dev
+          path: metamod-source
           
-      - name: Add msbuild to PATH (Windows)
-        if: runner.os == 'Windows'
-        uses: microsoft/setup-msbuild@v1.0.2
-        
-      - name: Install (Windows)
-        if: runner.os == 'Windows'
+      - name: Checking out own repository
+        uses: actions/checkout@v3
+        with:
+          path: sm_closestpos
+
+      - name: Compiling sm_closestpos files
+        working-directory: sm_closestpos
+        run: |
+          mkdir build
+          cd build
+          python3 ../configure.py --enable-optimize --symbol-files
+          ambuild
+          
+      - name: Uploading package
+        uses: actions/upload-artifact@v3
+        with:
+          name: sm_closestpos-linux-${{ env.GITHUB_SHA_SHORT }}
+          path: sm_closestpos/build/package
+
+  windows:
+    name: windows build
+    runs-on: windows-latest
+    steps:
+      - name: Prepare env
+        shell: bash
+        run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Find VC
         shell: cmd
         run: |
           :: See https://github.com/microsoft/vswhere/wiki/Find-VC
@@ -67,37 +76,34 @@ jobs:
           for /f "delims== tokens=1,2" %%a in ('set') do (
             echo>>"%GITHUB_ENV%" %%a=%%b
           )
-          
+
+      - name: Setting up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' 
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          pip install git+https://github.com/alliedmodders/ambuild
+
       - name: Checking out SourceMod
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: alliedmodders/sourcemod
-          ref: ${{ matrix.branch }}
-          path: sourcemod-${{ matrix.sm_version }}
+          ref: 1.11-dev
+          path: sourcemod
           submodules: recursive
           
       - name: Checking out MM:Source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: alliedmodders/metamod-source
-          ref: ${{ matrix.branch }}
-          path: metamod-${{ matrix.sm_version }}
-          
-      - name: Checking out AMBuild
-        uses: actions/checkout@v2
-        with:
-          repository: alliedmodders/ambuild
-          path: ambuild
-          
-      - name: Setting up Python
-        uses: actions/setup-python@v2
-        
-      - name: Setting up ambuild
-        working-directory: ambuild
-        run: python setup.py install
+          ref: 1.11-dev
+          path: metamod-source
           
       - name: Checking out own repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: sm_closestpos
 
@@ -106,11 +112,36 @@ jobs:
         run: |
           mkdir build
           cd build
-          python ../configure.py --enable-optimize --sm-path="${{ github.workspace }}/sourcemod-${{ matrix.sm_version }}" --mms-path="${{ github.workspace }}/metamod-${{ matrix.sm_version }}"
+          python3 ../configure.py --enable-optimize --symbol-files
           ambuild
           
       - name: Uploading package
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: sm_closestpos-sm${{ matrix.sm_version }}-${{ matrix.os }}-${{ env.GITHUB_SHA_SHORT }}
+          name: sm_closestpos-windows-${{ env.GITHUB_SHA_SHORT }}
           path: sm_closestpos/build/package
+          
+  release:
+    name: Release
+    if: github.ref_type == 'tag'
+    needs: [ 'linux', 'windows']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Arhive Assets
+        shell: bash
+        run: find * -maxdepth 0 -type d -exec zip -r {}.zip {} \;
+
+      - name: Create Release
+        shell: bash
+        run: gh release create ${{ github.ref_name }} --title ${{ github.ref_name }} --latest -R ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload assets
+        shell: bash
+        run: gh release upload ${{ github.ref_name }} *.zip -R ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
