@@ -165,7 +165,7 @@ bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 	Dl_info info;
 	// memutils is from sourcemod.logic.so so we can grab the module from it.
 	dladdr(memutils, &info);
-	void *sourcemod_logic = dlopen(info.dli_fname, RTLD_NOLOAD);
+	void *sourcemod_logic = dlopen(info.dli_fname, RTLD_NOW);
 
 	if (!sourcemod_logic)
 	{
@@ -177,11 +177,13 @@ bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 
 	if (!token)
 	{
+		dlclose(sourcemod_logic);
 		snprintf(error, maxlength, "failed to resolve symbol g_pCoreIdent");
 		return false;
 	}
 
 	g_pCoreIdent = *token;
+	dlclose(sourcemod_logic);
 #endif
 
 	if (!g_pCoreIdent)
