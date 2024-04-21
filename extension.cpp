@@ -173,7 +173,7 @@ bool ClosestPos::SDK_OnLoad(char* error, size_t maxlength, bool late)
 		return false;
 	}
 
-	IdentityToken_t **token = (IdentityToken_t **)dlsym(sourcemod_logic, "g_pCoreIdent");
+	IdentityToken_t **token = (IdentityToken_t **)memutils->ResolveSymbol(sourcemod_logic, "g_pCoreIdent");
 
 	if (!token)
 	{
