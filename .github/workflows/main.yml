@@ -25,6 +25,8 @@ jobs:
         sm_version:
           - "1.10"
           
+        #something here for linux/windows in zigcc?
+
         include:
           - sm_version: "1.10"
             branch: "1.10-dev"
@@ -36,6 +38,7 @@ jobs:
           - os: windows-latest
             
     steps:
+      - uses: goto-bus-stop/setup-zig@v2 # only used by linux but throw it here for ease
       - name: Prepare env
         shell: bash
         run: |
@@ -44,11 +47,13 @@ jobs:
       - name: Install (Linux)
         if: runner.os == 'Linux'
         run: |
+          chmod +x $GITHUB_WORKSPACE/.github/workflows/zigcc.sh $GITHUB_WORKSPACE/.github/workflows/zigcxx.sh
+          echo "CC=$GITHUB_WORKSPACE/.github/workflows/zigcc.sh" >> $GITHUB_ENV
+          echo "CXX=$GITHUB_WORKSPACE/.github/workflows/zigcxx.sh" >> $GITHUB_ENV
           sudo dpkg --add-architecture i386
-          sudo apt-get update
-          sudo apt-get install -y clang g++-multilib
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
+          sudo apt-get update -y
+          sudo apt-get install -y libc6:i386 libstdc++6:i386
+          #sudo apt-get install -y clang g++-multilib
           
       - name: Add msbuild to PATH (Windows)
         if: runner.os == 'Windows'
