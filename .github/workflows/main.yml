@@ -52,9 +52,9 @@ jobs:
       - name: Install (Linux)
         if: runner.os == 'Linux'
         run: |
-          chmod +x $GITHUB_WORKSPACE/.github/workflows/zigcc.sh $GITHUB_WORKSPACE/.github/workflows/zigcxx.sh
-          echo "CC=$GITHUB_WORKSPACE/.github/workflows/zigcc.sh" >> $GITHUB_ENV
-          echo "CXX=$GITHUB_WORKSPACE/.github/workflows/zigcxx.sh" >> $GITHUB_ENV
+          chmod +x $GITHUB_WORKSPACE/sm_closestpos/.github/workflows/zigcc.sh $GITHUB_WORKSPACE/sm_closestpos/.github/workflows/zigcxx.sh
+          echo "CC=$GITHUB_WORKSPACE/sm_closestpos/.github/workflows/zigcc.sh" >> $GITHUB_ENV
+          echo "CXX=$GITHUB_WORKSPACE/sm_closestpos/.github/workflows/zigcxx.sh" >> $GITHUB_ENV
           sudo dpkg --add-architecture i386
           sudo apt-get update -y
           sudo apt-get install -y libc6:i386 libstdc++6:i386
